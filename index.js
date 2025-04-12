@@ -29,6 +29,7 @@ async function run() {
 
 
     const jobsCollection = client.db('jobPortal').collection('jobs')
+    const jobsApplicationCollection = client.db('jobPortal').collection('job-applications')
 
 
     app.get('/jobs', async(req, res)=>{
@@ -44,6 +45,30 @@ async function run() {
       const result = await jobsCollection.findOne(query)
       res.send(result)
     })
+
+
+    app.post('/job-applications', async(req, res)=>{
+      const application = req.body
+      const result = await jobsApplicationCollection.insertOne(application)
+      res.send(result)
+    })
+
+
+
+    app.get('/job-applications', async(req, res)=>{
+      const email = req.query.email
+      const query = { applicant_email : email}
+      const result = await jobsApplicationCollection.find(query).toArray()
+      res.send(result)
+    })
+
+
+    // app.get('/job-applications', async(req, res)=>{
+    //   const email = req.query.email
+    //   const query = { applicant_email : email}
+    //   const result = await jobsApplicationCollection.find(query).toArray()
+    //   res.send(result)
+    // })
 
 
 
