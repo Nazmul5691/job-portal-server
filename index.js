@@ -32,22 +32,45 @@ async function run() {
     const jobsApplicationCollection = client.db('jobPortal').collection('job-applications')
 
 
-    app.get('/jobs', async(req, res)=>{
-        const cursor = jobsCollection.find()
-        const result = await cursor.toArray()
-        res.send(result)
-    })
+    // app.get('/jobs', async (req, res) => {
+    //   const cursor = jobsCollection.find()
+    //   const result = await cursor.toArray()
+    //   res.send(result)
+    // })
 
+    // app.get('/jobs', async (req, res) => {
+    //   const cursor = jobsCollection.find()
+    //   const result = await cursor.toArray()
+    //   res.send(result)
+    // })
 
-    app.get('/jobs/:id', async(req, res)=>{
-      const id = req.params.id
-      const query = {_id: new ObjectId(id)}
-      const result = await jobsCollection.findOne(query)
+    app.get('/jobs', async (req, res) => {
+      const email = req.query.email
+      let query = {}
+      if(email){
+        query = { hr_email : email}
+      }
+      const cursor = jobsCollection.find(query)
+      const result = await cursor.toArray()
       res.send(result)
     })
 
 
-    app.post('/job-applications', async(req, res)=>{
+    app.get('/jobs/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await jobsCollection.findOne(query)
+      res.send(result)
+    })
+
+    app.post('/jobs', async (req, res) => {
+      const job = req.body;
+      const result = await jobsCollection.insertOne(job)
+      res.send(result)
+    })
+
+
+    app.post('/job-applications', async (req, res) => {
       const application = req.body
       const result = await jobsApplicationCollection.insertOne(application)
       res.send(result)
@@ -55,20 +78,29 @@ async function run() {
 
 
 
-    app.get('/job-applications', async(req, res)=>{
+    app.get('/job-applications', async (req, res) => {
       const email = req.query.email
-      const query = { applicant_email : email}
+      const query = { applicant_email: email }
       const result = await jobsApplicationCollection.find(query).toArray()
+
+      for (const application of result) {
+        console.log(application.job_id);
+        const query1 = { _id: new ObjectId(application.job_id) }
+        const result1 = await jobsCollection.findOne(query1)
+        if (result1) {
+          application.title = result1.title
+          application.company = result1.company
+          application.company_logo = result1.company_logo
+          application.location = result1.location
+        }
+      }
+
       res.send(result)
     })
 
 
-    // app.get('/job-applications', async(req, res)=>{
-    //   const email = req.query.email
-    //   const query = { applicant_email : email}
-    //   const result = await jobsApplicationCollection.find(query).toArray()
-    //   res.send(result)
-    // })
+
+
 
 
 
@@ -86,10 +118,10 @@ run().catch(console.dir);
 
 
 
-app.get('/', (req, res) =>{
-    res.send('job portal server is running')
+app.get('/', (req, res) => {
+  res.send('job portal server is running')
 })
 
-app.listen(port, () =>{
-    console.log(`job portal server is running on port ${port}`);
+app.listen(port, () => {
+  console.log(`job portal server is running on port ${port}`);
 })
