@@ -1,12 +1,15 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000
 
 app.use(cors())
 app.use(express.json())
+app.use(cookieParser())
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.laemifb.mongodb.net/?appName=Cluster0`;
@@ -32,6 +35,18 @@ async function run() {
     const jobsApplicationCollection = client.db('jobPortal').collection('job-applications')
 
 
+    app.post('/jwt', async(req, res)=>{
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_SECRET, {expiresIn: '1h'})
+
+      res
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: false,
+
+      })
+      .send({success: true})
+    })
    
 
     // app.get('/jobs', async (req, res) => {
