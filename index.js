@@ -10,7 +10,10 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000
 
 app.use(cors({
-  origin: ['http://localhost:5173'],
+  origin: ['http://localhost:5173',
+    'https://job-portal-a038b.web.app',
+    'https://job-portal-a038b.firebaseapp.com'
+  ],
   credentials: true
 }))
 app.use(express.json())
@@ -37,6 +40,26 @@ app.use(cookieParser())
 //     next()
 //   })
 // }
+
+
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token
+  // console.log('inside the verify token', token);
+
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' })
+  }
+
+  // verify token
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: 'unauthorized access' })
+    }
+    req.user = decoded
+    next()
+  })
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.laemifb.mongodb.net/?appName=Cluster0`;
@@ -88,24 +111,26 @@ async function run() {
     //     .send({ success: true })
     // })
 
-    app.post('/jwt', async(req, res)=>{
+    app.post('/jwt', async (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '5h'})
-    
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '10h' })
+
       res
-      .cookie('token', token, {
-        httpOnly: true,
-        secure: false
-      })
-      .send({success: true})
+        .cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true })
     })
 
-    app.post('/logout', (req, res)=>{
-        res.clearCookie('token', {
-          httpOnly: true,
-          secure: false
-        })
-        .send({success: true})
+    app.post('/logout', (req, res) => {
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      })
+        .send({ success: true })
     })
 
 
@@ -183,7 +208,7 @@ async function run() {
 
 
 
-    app.get('/job-applications', async (req, res) => {
+    app.get('/job-applications', verifyToken, async (req, res) => {
       const email = req.query.email
       const query = { applicant_email: email }
 
@@ -195,6 +220,10 @@ async function run() {
       // if (req?.user?.email !== req?.query?.email) {
       //   return res.status(403).send({ message: 'forbidden access' })
       // }
+
+      if (req.user?.email !== req.query?.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
 
 
       const result = await jobsApplicationCollection.find(query).toArray()
@@ -234,8 +263,8 @@ async function run() {
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
