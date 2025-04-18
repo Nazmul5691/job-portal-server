@@ -115,6 +115,7 @@ async function run() {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '10h' })
 
+      //set token to the cookies in application
       res
         .cookie('token', token, {
           httpOnly: true,
@@ -143,12 +144,19 @@ async function run() {
     app.get('/jobs', async (req, res) => {
 
       const email = req.query.email
+      const sort = req.query?.sort
       let query = {}
+      let sortQuery = {}
+
+      // console.log(req.query);
       if (email) {
         query = { hr_email: email }
       }
 
-      const cursor = jobsCollection.find(query)
+      if(sort == "true"){
+        sortQuery = {"salaryRange.min" : -1}
+      }
+      const cursor = jobsCollection.find(query).sort(sortQuery)
       const result = await cursor.toArray()
       res.send(result)
     })
